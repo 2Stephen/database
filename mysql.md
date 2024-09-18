@@ -1,8 +1,8 @@
 [TOC]
 
-## 一.MySQL基础
+# 一.MySQL基础
 
-### 准备工作
+## 一.准备工作
 
 1. DB、DBMS、SQL
 
@@ -14,9 +14,7 @@
 
 4. 客户端连接：命令行输入`mysql [-h 127.0.0.1] [-p 3306] -u root -p`host和port可选
 
-### mysql数据模型
-
-+ 关系型数据库
+5. mysql数据模型：关系型数据库
 
 ## 二.SQL
 
@@ -222,10 +220,8 @@
      select from emp where age in(18,20,40); -- in的用法
      -- 查询姓名为两个字的员工信息
      select from emp where name like '__'; -- like用法
-     
-     
      ```
-
+     
      | 比较运算符         | 功能                                        |
      | ------------------ | ------------------------------------------- |
      | >、>=、<、<=、=    | 略                                          |
@@ -237,7 +233,7 @@
      | AND 或 &&          | 与                                          |
      | OR 或 \|\|         | 或                                          |
      | NOT 或 !           | 非                                          |
-
+     
    + 聚合函数：将一列数据作为一个整体，进行纵向计算
 
      常见聚合函数：count、max、min、avg、sum
@@ -245,7 +241,7 @@
      ```sql
      SELECT 聚合函数(字段列表) FROM 表名;
      ```
-
+   
      **注意：所有null值不参与聚合函数计算**
 
    + 分组查询
@@ -259,17 +255,17 @@
      -- 3.查询年龄小于45的员工，并根据工作地址分组，获取员工数量大于等于3的工作地址
      select workaddress,count(*) address_count from emp where age < 45 group by workaddress having address_count > 3;
      ```
-
+   
      where与having区别
 
      + 执行时机不同：where.是分组之前进行过滤，不满足where条件，不参与分组；而having是分组之后对结果进行过滤。
      + 判断条件不同：where不能对聚合函数进行判断，而having可以。
-
+   
      注意
 
      + 执行顺序：where>聚合函数>having。
      + 分组之后，查询的字段一般为聚合函数和分组字段，查询其他字段无任何意义。
-
+   
    + 排序查询
 
      ```SQL
@@ -279,19 +275,19 @@
      -- DESC：降序
      -- 注意：如果是多字段排序，当第一个字段值相同时，才会根据第二个字段进行排序。
      ```
-
+   
    + 分页查询：
 
      ```sql
      SELECT 字段列表 FROM 表名 LIMIT 起始索引，查询记录数;
      ```
-
+   
      注意：
 
      + 起始索引从0开始，起始索引=（查询页码-1)*每页显示记录数。
      + 分页查询是数据库的方言，不同的数据库有不同的实现，MySQL中是LIMIT。
      + 如果查询的是第一页数据，起始索引可以省略，直接简写为limit 10。
-
+   
    + ```sql
      -- 1.查询年龄为20,21,22,23岁的女性员工信息。
      select from emp where gender ='女' and age in(20,21,22,23);
@@ -304,7 +300,7 @@
      -- 5.查询性别为男，且年龄在20-40岁（含）以内的前5个员工信息，对查询的结果按年龄升序排序，年龄相同按入职时间升序排序。
      select from emp where gender ='男' and age between 20 and 40 order by age asc,entrydate asc limit 5;
      ```
-
+   
    + DQL执行顺序
 
      ![](./pics/DQL执行顺序.png)
@@ -575,11 +571,240 @@
    SET [SESSION|GLOBAL] TRANSACTION ISOLATION LEVEL {READ UNCOMMITTED|READ COMMITTED| REPEATABLE|SERIALIZABLE}
    ```
 
+
+# 二.进阶
+
+## 一.存储引擎
+
+1. mysql体系结构
+
+   + 连接层：最上层是一些客户端和链接服务，主要完成一些类似于连接处理、授权认证、及相关的安全方案。服务器也会为安全接入的每个客户端验证它所具有的操作权限。
+   + 服务层：第二层架构主要完成大多数的核心服务功能，如SQL接口，并完成缓存的查询，SQL的分析和优化，部分内置函数的执行。所有跨存储引擎的功能也在这一层实现，如过程、函数等。
+   + 引擎层：存储引擎真正的负责了MySOL中数据的存储和提取，服务器通过AP和存储引擎进行通信。不同的存储引擎具有不同的功能，这样我们可以根据自己的需要，来选取合适的存储引擎。
+   + 存储层：主要是将数据存储在文件系统之上，并完成与存储引擎的交互。
+
+   ![](./pics/mysql体系结构.png)
+
    
 
+2. 存储引擎
 
+   + 简介：存储引擎就是存储数据、建立索引、更新/查询数据等技术的实现方式。存储引擎是基于表的，而不是基于库的，所以存储引擎也可被称为表类型。
 
+   + ```sql
+     -- 创建表时指定引擎(默认InnoDB)
+     create table name(
+     ...
+     )ENGINE = INNODB;
+     -- 查看当前数据库支持的存储引擎
+     show engines;
+     ```
 
+3. 存储引擎特点
+
+   + InnoDB：InnoDB是一种兼顾高可靠性和高性能的通用存储引擎，在MySQL5.5之后，InnoDB是默认的MySQL存储引擎。
+
+     >特点：
+     >
+     >​	DML操作遵循ACID模型，支持事务；
+     >​	行级锁，提高并发访问性能；
+     >​	支持外键FOREIGN KEY约束，保证数据的完整性和正确性；
+     >
+     >文件：
+     >
+     >​	XXX.ibd：xxx代表的是表名，innoDB引擎的每张表都会对应这样一个表空间文件，存储该表的表结构(frm、sdi)、数据和索引。
+     >
+     >​	参数：innodb_file_per_table（查看每张表是否单独存储在一个文件）
+     >
+     >​	终端输入`ibd2sdi xxx.ibd`可查看sdi表结构数据
+
+     ![](./pics/InnoDB逻辑存储结构.png)
+
+   + MyISAM：是MySQL早期的默认存储引擎。
+
+     > 特点：
+     > 	不支持事务，不支持外键
+     > 	支持表锁，不支持行锁
+     > 	访问速度快
+     >
+     > 文件
+     > 	xxx.sdi:存储表结构信息
+     > 	xxx.MYD:存储数据
+     > 	xxx.MYI:存储索引
+
+   + Memory：Memory引擎的表数据时存储在内存中的，由于受到硬件问题、或断电问题的影响，只能将这些表作为临时表或缓存使用。
+
+     > 特点：
+     >
+     > ​	内存存放
+     >
+     > ​	hash索引（默认）
+     >
+     > 文件：
+     >
+     > ​	xxx.sdi：存储表结构信息
+
+   ![](./pics/存储引擎特点.png)
+
+4. 存储引擎选择
+
+   在选择存储引擎时，应该根据应用系统的特点选择合适的存储引擎。对于复杂的应用系统，还可以根据实际情况选择多种存储引擎进行组合。
+
+   > InnoDB:是Mysql的默认存储引擎，支持事务、外键。如果应用对事务的完整性有比较高的要求，在并发条件下要求数据的一致性，数据操作除了插入和查询之外，还包含很多的更新、删除操作，那么InnoDB存储引擎是比较合适的选择。
+   >
+   > MyISAM：如果应用是以读操作和插入操作为主，只有很少的更新和删除操作，并且对事务的完整性、并发性要求不是很高，那么选择这个存储引擎是非常合适的。(现大部分被MongoDB替代)
+   >
+   > MEMORY:将所有数据保存在内存中，访问速度快，通常用于临时表及缓存。MEMORYE的缺陷是对表的大小有限制，太大的表无法缓存在内存中，而且无法保障数据的安全性。(现大部分被Redis替代)
+
+## 二.索引
+
+### 1.准备工作
+
+1. linux版本mysql安装：官网下载安装包，命令行依次安装各个包，
+
+   ```shell
+   [stephen@localhost mysql]$ ls # 查看mysql文件
+   mysql-community-client-8.4.0-1.el8.x86_64.rpm
+   ...
+   mysql-community-test-debuginfo-8.4.0-1.el8.x86_64.rpm
+   
+   [stephen@localhost mysql]$ su # 提权，用户Stephen无权安装
+   Password: 
+   [root@localhost mysql]# rpm -ivh mysql-community-common-8.4.0-1.el8.x86_64.rpm
+   [root@localhost mysql]# rpm -ivh mysql-community-icu-data-files-8.4.0-1.el8.x86_64.rpm
+   [root@localhost mysql]# rpm -ivh mysql-community-client-plugins-8.4.0-1.el8.x86_64.rpm
+   [root@localhost mysql]# rpm -qa | grep -E 'mysql|mariadb' # 如果有mariadb程序需要删掉，删除命令为:rpm -e --nodeps xxx
+   [root@localhost mysql]# rpm -ivh mysql-community-libs-8.4.0-1.el8.x86_64.rpm
+   [root@localhost mysql]# rpm -ivh mysql-community-client-8.4.0-1.el8.x86_64.rpm
+   [root@localhost mysql]# rpm -ivh mysql-community-server-8.4.0-1.el8.x86_64.rpm
+   ```
+
+2. 修改数据库默认密码
+
+   ```shell
+   [root@localhost mysql]# systemctl start mysqld # 开启数据库
+   [root@localhost mysql]# systemctl status mysqld # 查看状态
+   ● mysqld.service - MySQL Server
+      Loaded: loaded (/usr/lib/systemd/system/mysqld.service; enabled; vendor preset: disab>
+      Active: active (running) since Wed 2024-09-11 00:42:30 PDT; 7s ago
+        Docs: man:mysqld(8)
+              http://dev.mysql.com/doc/refman/en/using-systemd.html
+     Process: 74010 ExecStartPre=/usr/bin/mysqld_pre_systemd (code=exited, status=0/SUCCESS)
+    Main PID: 74469 (mysqld)
+      Status: "Server is operational"
+       Tasks: 36 (limit: 4780)
+      Memory: 258.0M
+      CGroup: /system.slice/mysqld.service
+              └─74469 /usr/sbin/mysqld
+   
+   Sep 11 00:42:19 localhost.localdomain systemd[1]: Starting MySQL Server...
+   Sep 11 00:42:30 localhost.localdomain systemd[1]: Started MySQL Server.
+   
+   [root@localhost mysql]# systemctl enable mysqld # 允许开机自启
+   [root@localhost mysql]# grep 'temporary password' /var/log/mysqld.log
+   2024-09-11T07:42:25.015336Z 6 [Note] [MY-010454] [Server] A temporary password is generated for root@localhost: Y;/:9bSEbTp& # 此处为初始密码
+   [root@localhost mysql]# mysql -u root -p
+   Enter password: 
+   Welcome to the MySQL monitor.  Commands end with ; or \g.
+   Your MySQL connection id is 10
+   Server version: 8.4.0
+   ...
+   mysql> ALTER USER 'root'@'localhost' IDENTIFIED BY '2432757689'; # 修改简单密码会不符合条件，需要修改复杂密码，包含数字，大小写字母，符号，八位以上
+   mysql> ALTER USER 'root'@'localhost' IDENTIFIED BY '2432757689Hll.';
+   Query OK, 0 rows affected (0.01 sec)
+   mysql> set global validate_password.policy = 0; # 修改密码校验规则为最低
+   Query OK, 0 rows affected (0.01 sec)
+   mysql> set global validate_password.length = 6; # 修改密码长度最低六位
+   Query OK, 0 rows affected (0.00 sec)
+   mysql> ALTER USER 'root'@'localhost' IDENTIFIED BY '243275'; # 此时即可修改为简单密码
+   Query OK, 0 rows affected (0.00 sec)
+   ```
+
+3. 关闭linux防火墙，允许在windows系统的数据库软件操作linux虚拟机中的数据库
+
+   ```shell
+   mysql> create user 'root'@'%' IDENTIFIED WITH caching_sha2_password BY '243275'; # 创建用户名root，密码243275
+   Query OK, 0 rows affected (0.01 sec)
+   mysql> quit # 关闭数据库
+   Bye
+   [root@localhost mysql]# ifconfig # 查看本机ip地址，下面inet即为ip地址
+   ens160: ...
+           inet 192.168.17.130  netmask 255.255.255.0  broadcast 192.168.17.255
+           ...
+   
+   [root@localhost mysql]# sudo systemctl status firewalld # 查看linux防火墙
+   [root@localhost mysql]# sudo firewall-cmd --zone=public --add-port=3306/tcp --permanent ## 开放3306端口
+   success
+   [root@localhost mysql]# sudo firewall-cmd --reload # 重新加载防火墙
+   success
+   [root@localhost mysql]# sudo firewall-cmd --list-ports # 查看已开放端口
+   3306/tcp
+   ```
+
+### 2.索引
+
+1. 介绍：索引（index)是帮助MySQL高效获取数据的数据结构（有序）。在数据之外，数据库系统还维护着满足特定查找算法的数据结构，这些数据结构以某种方式引用（指向）数据，这样就可以在这些数据结构上实现高级查找算法，这种数据结构就是索引。
+
+2. 索引优缺点：
+
+   优势：
+
+   + 提高数据检索的效率，降低数据库的成本
+   + 通过索引列对数据进行排序，降低数据排序的成本，降低CPU的消耗。
+
+   劣势：
+
+   + 索引大大提高了查询效率，同时却也降低更新表的速度，如对表进
+     行INSERT、UPDATE、DELETE时，效率降低。
+   + 索引列也是要占用空间的。
+
+3. 常见索引结构：
+
+   | 索引结构            | 描述                                                         |
+   | ------------------- | ------------------------------------------------------------ |
+   | B+Tree索引          | 最常见的索引类型，大部分引擎都支持B+树索引                   |
+   | Hash索引            | 底层数据结构是用哈希表实现的，只有精确匹配索引列的查询才有效，不支持范围查询 |
+   | R-tree(空间索引)    | 空间索引是MyISAM引擎的一个特殊索引类型，主要用于地理空间数据类型，通常使用较少 |
+   | Full-text(全文索引) | 是一种通过建立倒排索引，快速匹配文档的方式。类似于Lucene,Solr,ES |
+
+4. ![](./pics/索引结构支持情况.png)
+
+5. 二叉树缺点：顺序插入时，会形成一个链表，查询性能大大降低。大数据量情况下，层级较深，检索速度慢。
+   红黑树：大数据量情况下，层级较深，检索速度慢。
+
+6. [数据结构和算法可视化网站](https://www.cs.usfca.edu/~galles/visualization/Algorithms.html)
+
+7. B-Tree、B+Tree
+
+   > B+Tree非叶子结点做索引，所有元素都存在叶子结点
+   >
+   > B+Tree叶子结点形成单向链表
+
+8. mysql的B+Tree：MySQL索引数据结构对经典的B+Tree进行了优化。在原B+Tree的基础上，增加一个指向相邻叶子节点的链表指针，就形成了带有顺序
+   指针的B+Tree,提高区间访问的性能。
+
+   ![](./pics/mysqlB+Tree.png)
+
+9. hash索引：哈希索引就是采用一定的hash算法，将键值换算成新的hash值，映射到对应的槽位上，然后存储在hash表中。
+   如果两个（或多个）键值，映射到一个相同的槽位上，他们就产生了hash冲突（也称为hash碰撞），可以通过链表来解决。
+
+   > Hash索引特点：
+   > 1.Hash索引只能用于对等比较(=，in),不支持范围查询(between,>,<,…)
+   > 2.无法利用索引完成排序操作
+   > 3.查询效率高，通常只需要一次检索就可以了，效率通常要高于B+tree索引
+   >
+   > 存储引擎支持：
+   > 在MySQL中，支持hash索引的是Memory引擎，而InnoDB中具有自适应hash功能，hash索引是存储引擎根据B+Tree索引在指定条件下自动构建的。
+
+10. 为什么InnoDB存储引擎选择使用B+tree索引结构？
+
+    + 相对于二叉树，层级更少，搜索效率高；
+    + 对于B-tree,无论是叶子节点还是非叶子节点，都会保存数据，这样导致一
+      页中存储的键值减少，指针跟着减少，要同样保存大量数据，只能增加树的
+      高度，导致性能降低
+    + 对于hash索引，B+Tree支持范围匹配和排序操作
+
+### 3.索引分类
 
 
 
